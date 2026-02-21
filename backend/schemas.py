@@ -26,3 +26,19 @@ class NoteResponse(BaseModel):
     title: str
     content: str
     tags: List[str]
+
+class AskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(..., min_length=1)
+    top_k: int = Field(5, ge=1, le=10)
+
+class Citation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note_id: str
+    chunk_index: int
+    quote: str
+
+class AskResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: str
+    citations: List[Citation]

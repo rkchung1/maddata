@@ -33,3 +33,31 @@ def embed_text(text: str) -> List[float]:
 def embed_note(title: str, content: str) -> List[float]:
     text = f"{title}\n\n{content}"
     return embed_text(text)
+
+
+def chunk_text(text: str, max_words: int = 200, overlap: int = 40) -> List[str]:
+    words = text.split()
+    if not words:
+        return []
+    chunks: List[str] = []
+    start = 0
+    while start < len(words):
+        end = min(len(words), start + max_words)
+        chunk = " ".join(words[start:end]).strip()
+        if chunk:
+            chunks.append(chunk)
+        if end == len(words):
+            break
+        start = max(0, end - overlap)
+    return chunks
+
+
+def embed_chunks(chunks: List[str]) -> List[List[float]]:
+    if not chunks:
+        return []
+    resp = _get_client().embeddings.create(
+        model=_get_model(),
+        input=chunks,
+        encoding_format="float",
+    )
+    return [item.embedding for item in resp.data]
