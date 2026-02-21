@@ -1,4 +1,3 @@
-// src/components/NoteSidebar.tsx
 import type { Note } from "@/types/Note"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -13,7 +12,7 @@ interface NoteSidebarProps {
 
 export default function NoteSidebar({ notes, activeNoteId, setActiveNoteId, onAddNote }: NoteSidebarProps) {
   return (
-    <Card className="w-64 flex flex-col p-2 gap-2">
+    <Card className="w-64 flex flex-col p-2 h-screen bg-secondary"> {/* fulls available height */}
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold">Notes</h2>
         {onAddNote && (
@@ -23,6 +22,7 @@ export default function NoteSidebar({ notes, activeNoteId, setActiveNoteId, onAd
         )}
       </div>
 
+      {/* Make ScrollArea flex-1 to fill remaining space */}
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-1">
           {notes.map((note) => (
