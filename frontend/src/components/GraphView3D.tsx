@@ -159,7 +159,12 @@ function buildGraphFromNotes(notes: Note[], threshold = 0.5, maxLinksPerNode = 4
   }
 }
 
-export default function GraphView3D({ notes }: { notes: Note[] }) {
+type GraphView3DProps = {
+  notes: Note[]
+  onNodeClick?: (noteId: string) => void
+}
+
+export default function GraphView3D({ notes, onNodeClick }: GraphView3DProps) {
   const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | null>(null)
   const [showLabels, setShowLabels] = useState(true)
   const [minMmr, setMinMmr] = useState(0.33)
@@ -249,6 +254,10 @@ export default function GraphView3D({ notes }: { notes: Note[] }) {
           return sprite
         }}
         onNodeClick={(node: NodeObject<GraphNode>) => {
+          // 1) Navigate back to notes
+          onNodeClick?.(String(node.id))
+
+          // 2) Keep your camera animation
           const nx = node.x ?? 0
           const ny = node.y ?? 0
           const nz = node.z ?? 0

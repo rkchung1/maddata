@@ -1,178 +1,231 @@
 import type { Note } from "@/types/Note"
-import { useRef, useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { BicepsFlexed, Filter, Check } from "lucide-react"
+import { BicepsFlexed, Filter, Check, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import NoteRowButton from "@/components/NoteRowButton"
 
 interface NoteSidebarProps {
-  notes: Note[]
-  activeNoteId: string | null
-  setActiveNoteId: (id: string) => void
-  onAddNote?: () => void
-  activeTags: string[]
-  setActiveTags: (tags: string[]) => void
+    notes: Note[]
+    activeNoteId: string | null
+    setActiveNoteId: (id: string) => void
+    onAddNote?: () => void
+    activeTags: string[]
+    setActiveTags: (tags: string[]) => void
+    isTaggingById?: (id: string) => boolean
+    onDeleteNote?: (id: string) => void | Promise<void>
+}
+
+function includesLoose(haystack: string, needle: string) {
+    return haystack.toLowerCase().includes(needle.toLowerCase())
 }
 
 export default function NoteSidebar({
-  notes,
-  activeNoteId,
-  setActiveNoteId,
-  onAddNote,
-  activeTags,
-  setActiveTags,
+    notes,
+    activeNoteId,
+    setActiveNoteId,
+    onAddNote,
+    activeTags,
+    setActiveTags,
+    isTaggingById,
+    onDeleteNote
 }: NoteSidebarProps) {
-  // --- Resizable width ---
-  const MIN = 240
-  const MAX = 420
-  const [width, setWidth] = useState(260)
-  const dragging = useRef(false)
+    // --- Search state (merged) ---
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [query, setQuery] = useState("")
 
-  const startDrag = () => {
-    dragging.current = true
-    document.body.style.cursor = "col-resize"
-    document.body.style.userSelect = "none"
-  }
+    // tags list
+    const allTags = useMemo(
+        () =>
+            Array.from(new Set(notes.flatMap((n) => n.tags ?? []))).sort((a, b) =>
+                a.localeCompare(b)
+            ),
+        [notes]
+    )
 
-  const stopDrag = () => {
-    dragging.current = false
-    document.body.style.cursor = ""
-    document.body.style.userSelect = ""
-  }
-
-  useEffect(() => {
-    const onDrag = (e: MouseEvent) => {
-      if (!dragging.current) return
-      setWidth((prev) => {
-        const next = prev + e.movementX
-        return Math.min(MAX, Math.max(MIN, next))
-      })
+    const toggleTag = (tag: string) => {
+        if (activeTags.includes(tag)) setActiveTags(activeTags.filter((t) => t !== tag))
+        else setActiveTags([...activeTags, tag])
     }
 
-    window.addEventListener("mousemove", onDrag)
-    window.addEventListener("mouseup", stopDrag)
+    const filteredNotes = useMemo(() => {
+        const q = query.trim()
 
-    return () => {
-      window.removeEventListener("mousemove", onDrag)
-      window.removeEventListener("mouseup", stopDrag)
-      stopDrag()
-    }
-  }, [])
+        return notes.filter((n) => {
+            // tag filter
+            const passesTags =
+                activeTags.length === 0 ? true : (n.tags ?? []).some((t) => activeTags.includes(t))
+            if (!passesTags) return false
 
-  const allTags = Array.from(new Set(notes.flatMap((n) => n.tags ?? []))).sort((a, b) =>
-    a.localeCompare(b)
-  )
+            // search filter (keyword for now)
+            if (!searchOpen || q.length === 0) return true
 
-  const toggleTag = (tag: string) => {
-    if (activeTags.includes(tag)) setActiveTags(activeTags.filter((t) => t !== tag))
-    else setActiveTags([...activeTags, tag])
-  }
+            const hay = `${n.title ?? ""}\n${n.content ?? ""}\n${(n.tags ?? []).join(" ")}`
+            return includesLoose(hay, q)
+        })
+    }, [notes, activeTags, query, searchOpen])
 
-  const filteredNotes =
-    activeTags.length === 0
-      ? notes
-      : notes.filter((n) => (n.tags ?? []).some((t) => activeTags.includes(t)))
+    const hasActiveFilters = activeTags.length > 0 || (searchOpen && query.trim().length > 0)
 
-  return (
-    <div className="relative flex shrink-0">
-      <Card style={{ width }} className="flex flex-col h-[100dvh] bg-secondary">
-        {/* Header */}
-        <div className="flex items-center justify-between p-2">
-          <div className="flex items-center gap-2">
-            <BicepsFlexed className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">PowerNote</h2>
-          </div>
+    return (
+        <div className="relative flex shrink-0 pr-5">
+            {/* Fixed width + slightly wider */}
+            <Card className="flex flex-col h-[100dvh] bg-secondary w-[400px]">
+                {/* Header */}
+                <div className="p-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <BicepsFlexed className="h-5 w-5 text-primary" />
+                            <h2 className="text-lg font-semibold">PowerNote</h2>
+                        </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className={cn(
-                  "border border-transparent hover:border-muted",
-                  activeTags.length > 0 && "border-primary"
+                        <div className="flex items-center gap-1">
+                            {/* Search toggle */}
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                title="Search"
+                                onClick={() => setSearchOpen((v) => !v)}
+                                className={cn(
+                                    "border border-transparent hover:border-muted",
+                                    searchOpen && "border-primary"
+                                )}
+                                aria-label="Search notes"
+                            >
+                                <Search className="h-4 w-4" />
+                            </Button>
+
+                            {/* Tag filter */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        title="Filter"
+                                        className={cn(
+                                            "border border-transparent hover:border-muted",
+                                            activeTags.length > 0 && "border-primary"
+                                        )}
+                                        aria-label="Filter by tags"
+                                    >
+                                        <Filter className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+
+                                <DropdownMenuContent align="end" className="w-44">
+                                    <DropdownMenuItem onClick={() => setActiveTags([])} className="justify-between">
+                                        All tags
+                                        {activeTags.length === 0 && <Check className="h-4 w-4" />}
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+
+                                    {allTags.length === 0 ? (
+                                        <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
+                                    ) : (
+                                        allTags.map((tag) => {
+                                            const selected = activeTags.includes(tag)
+                                            return (
+                                                <DropdownMenuItem
+                                                    key={tag}
+                                                    onClick={() => toggleTag(tag)}
+                                                    className="justify-between"
+                                                >
+                                                    #{tag}
+                                                    {selected && <Check className="h-4 w-4" />}
+                                                </DropdownMenuItem>
+                                            )
+                                        })
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+
+                    {/* Search row */}
+                    {searchOpen && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <Input
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Search notes…"
+                                className="h-9 bg-background/40"
+                            />
+                            {query.trim().length > 0 && (
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    title="Clear"
+                                    onClick={() => setQuery("")}
+                                    className="h-9 w-9 border border-transparent hover:border-muted"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Tiny status line */}
+                    {hasActiveFilters && (
+                        <div className="mt-2 text-xs text-muted-foreground flex items-center justify-between">
+                            <span className="tabular-nums">{filteredNotes.length} results</span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                    setActiveTags([])
+                                    setQuery("")
+                                    setSearchOpen(false)
+                                }}
+                            >
+                                Clear
+                            </Button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Notes list */}
+                <ScrollArea className="flex-1 min-h-0 px-2">
+                    <div className="pb-2">
+                        {filteredNotes.map((note, idx) => (
+                            <div key={note.id}>
+                                <NoteRowButton
+                                    note={note}
+                                    isActive={activeNoteId === note.id}
+                                    onSelect={() => setActiveNoteId(note.id)}
+                                    showTags={true}
+                                    excerptLines={1}
+                                    query={searchOpen ? query : ""}
+                                    isTagging={isTaggingById?.(note.id) ?? false}
+                                    onDelete={onDeleteNote ? () => onDeleteNote(note.id) : undefined}
+                                />
+                                {idx !== filteredNotes.length - 1 && <Separator className="my-1" />}
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+
+                {/* Bottom bar: New note */}
+                {onAddNote && (
+                    <div className="p-2 border-t border-muted">
+                        <Button onClick={onAddNote} className="w-full" variant="default">
+                            + New note
+                        </Button>
+                    </div>
                 )}
-                aria-label="Filter by tags"
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => setActiveTags([])} className="justify-between">
-                All tags
-                {activeTags.length === 0 && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {allTags.length === 0 ? (
-                <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
-              ) : (
-                allTags.map((tag) => {
-                  const selected = activeTags.includes(tag)
-                  return (
-                    <DropdownMenuItem
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className="justify-between"
-                    >
-                      #{tag}
-                      {selected && <Check className="h-4 w-4" />}
-                    </DropdownMenuItem>
-                  )
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Card>
         </div>
-
-        {/* Notes list */}
-        <ScrollArea className="flex-1 min-h-0 px-2">
-          <div className="pb-2">
-            {filteredNotes.map((note, idx) => (
-              <div key={note.id}>
-                <NoteRowButton
-                  note={note}
-                  isActive={activeNoteId === note.id}
-                  onSelect={() => setActiveNoteId(note.id)}
-                  showTags={true}
-                  excerptLines={1}
-                  // TODO: remove tagsOverride once note.tags are fully used everywhere
-                  tagsOverride={["thinking", "relationship"]}
-                />
-
-                {idx !== filteredNotes.length - 1 && <Separator className="my-1" />}
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-
-        {/* Bottom bar: New note */}
-        {onAddNote && (
-          <div className="p-2 border-t border-muted">
-            <Button onClick={onAddNote} className="w-full" variant="default">
-              + New note
-            </Button>
-          </div>
-        )}
-      </Card>
-
-      {/* Drag handle */}
-      <div
-        onMouseDown={startDrag}
-        className="w-1 cursor-col-resize hover:bg-primary/40 transition-colors"
-      />
-    </div>
-  )
+    )
 }

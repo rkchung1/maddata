@@ -3,7 +3,7 @@ import { GitGraph, NotebookPen, MessageCircleQuestionMark, Sparkles } from "luci
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type Tab = "notes" | "graph" | "search" | "chat"
+type Tab = "notes" | "graph"| "chat"
 
 interface TabSidebarProps {
     currentTab: Tab
@@ -27,15 +27,6 @@ export default function TabSidebar({ currentTab, setCurrentTab }: TabSidebarProp
                 className={cn(base, currentTab === "notes" ? active : inactive)}
             >
                 <NotebookPen className="h-6 w-6" />
-            </Button>
-
-            <Button
-                title="Smart Search"
-                variant="ghost"
-                onClick={() => setCurrentTab("search")}
-                className={cn(base, currentTab === "search" ? active : inactive)}
-            >
-                <Sparkles className="h-6 w-6" />
             </Button>
 
             <Button

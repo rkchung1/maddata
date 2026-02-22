@@ -96,11 +96,33 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
     fetchNotes()
   }, [mock])
 
-  // =======================
   // Save / Update Note
-  // =======================
-  const saveNote = async ({ id, title, content }: { id: string; title: string; content: string }) => {
+  // Performs optimistic local update first, then merges backend result
+  const saveNote = async ({
+    id,
+    title,
+    content,
+  }: {
+    id: string
+    title: string
+    content: string
+  }) => {
+    // Immediate local update so UI reflects changes instantly
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === id
+          ? {
+            ...n,
+            title,
+            content,
+            updatedAt: new Date().toISOString(),
+          }
+          : n
+      )
+    )
+
     try {
+      // Backend save and enrichment (tags, embeddings, etc.)
       let updatedNote: Note
       if (mock) {
         updatedNote = await mockSaveNote({ id, title, content })
@@ -110,16 +132,86 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, content }),
         })
+
         if (!response.ok) {
           throw new Error(`PUT /api/notes/${id} failed with status ${response.status}`)
         }
+
         updatedNote = (await response.json()) as Note
       }
-      setNotes((prev) => prev.map((n) => (n.id === id ? updatedNote : n)))
+
+      // Merge backend result without undoing local edits
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === id
+            ? {
+              ...n,
+              ...updatedNote,
+              title,
+              content,
+            }
+            : n
+        )
+      )
     } catch (err) {
       console.error("Failed to save note:", err)
     }
   }
+
+  const mockDeleteNote = async (id: string) =>
+    new Promise<void>((resolve) => setTimeout(() => resolve(), 200))
+
+  // =======================
+  // Delete Note (optimistic)
+  // =======================
+  const deleteNote = async (id: string) => {
+    // Capture snapshot for rollback
+    let removed: Note | null = null
+    let nextActiveId: string | null = null
+
+    setNotes((prev) => {
+      const idx = prev.findIndex((n) => n.id === id)
+      if (idx === -1) return prev
+
+      removed = prev[idx]
+
+      const next = prev.filter((n) => n.id !== id)
+
+      // Decide next active note if we deleted the current one
+      if (activeNoteId === id) {
+        nextActiveId = next[0]?.id ?? null
+      }
+
+      return next
+    })
+
+    // Apply active note change after state update
+    if (activeNoteId === id) {
+      setActiveNoteId(nextActiveId)
+    }
+
+    try {
+      if (mock) {
+        await mockDeleteNote(id)
+      } else {
+        const response = await fetch(`/api/notes/${id}`, { method: "DELETE" })
+        if (!response.ok) {
+          throw new Error(`DELETE /api/notes/${id} failed with status ${response.status}`)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete note:", err)
+
+      // Rollback UI if delete failed
+      if (removed) {
+        setNotes((prev) => [removed as Note, ...prev])
+        if (activeNoteId === id) {
+          setActiveNoteId((removed as Note).id)
+        }
+      }
+    }
+  }
+
 
   // =======================
   // Add Note
@@ -149,5 +241,5 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
 
   const activeNote = notes.find((n) => n.id === activeNoteId) || null
 
-  return { notes, activeNote, activeNoteId, setActiveNoteId, saveNote, addNote }
+  return { notes, activeNote, activeNoteId, setActiveNoteId, saveNote, addNote, deleteNote }
 }

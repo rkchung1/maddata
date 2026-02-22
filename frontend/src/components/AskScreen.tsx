@@ -12,7 +12,7 @@ export default function ChatRagScreen(props: {
   onOpenCitation?: (noteId: string) => void
 }) {
   const { onOpenCitation } = props
-  const { messages, isLoading, error, ask, reset } = useAsk({ mock: true })
+  const { messages, isLoading, error, ask, reset } = useAsk({ mock: false })
 
   const [input, setInput] = React.useState("")
   const listRef = React.useRef<HTMLDivElement | null>(null)

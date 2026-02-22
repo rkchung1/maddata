@@ -167,6 +167,20 @@ def create_note(payload: NoteCreate) -> NoteResponse:
         embedding=embedding,
     )
 
+@app.delete("/api/notes/{note_id}")
+def delete_note(note_id: str):
+    with _get_conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM notes WHERE id = ?",
+            (note_id,),
+        )
+        conn.commit()
+
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+    return {"success": True, "id": note_id}
+
 @app.put("/api/notes/{note_id}", response_model=NoteResponse)
 def update_note(note_id: str, payload: NoteUpdate) -> NoteResponse:
     note_record = _build_note_record(note_id, payload.title, payload.content)
