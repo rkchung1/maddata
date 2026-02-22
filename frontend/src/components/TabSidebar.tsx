@@ -1,37 +1,59 @@
 // src/components/TabSidebar.tsx
-import { GitGraph, NotebookPen, Search } from "lucide-react"
+import { GitGraph, NotebookPen, Search, MessageCircleQuestionMark } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+
+type Tab = "notes" | "graph" | "search" | "chat"
 
 interface TabSidebarProps {
-    currentTab: "notes" | "graph" | "search",
-    setCurrentTab: (tab: "notes" | "graph" | "search") => void
+    currentTab: Tab
+    setCurrentTab: (tab: Tab) => void
 }
 
 export default function TabSidebar({ currentTab, setCurrentTab }: TabSidebarProps) {
+    const base =
+        "h-11 w-11 p-0 rounded-xl border transition-colors " +
+        "focus-visible:ring-0 focus-visible:ring-offset-0"
+
+    const active = "border-primary bg-transparent"
+    const inactive = "border-transparent hover:border-muted bg-transparent"
+
     return (
         <div className="w-16 bg-secondary flex flex-col justify-center items-center py-4 gap-4">
-            <button
+            <Button
+                type="button"
+                variant="ghost"
                 onClick={() => setCurrentTab("notes")}
-                className={`p-2 rounded ${currentTab === "notes" ? "bg-accent" : "hover:bg-muted"
-                    }`}
+                className={cn(base, currentTab === "notes" ? active : inactive)}
             >
-                <NotebookPen className="w-6 h-6" />
-            </button>
-            
-            <button
-                onClick={() => setCurrentTab("search")}
-                className={`p-2 rounded ${currentTab === "search" ? "bg-accent" : "hover:bg-muted"
-                    }`}
-            >
-                <Search className="w-6 h-6" />
-            </button>
+                <NotebookPen className="h-6 w-6" />
+            </Button>
 
-            <button
-                onClick={() => setCurrentTab("graph")}
-                className={`p-2 rounded ${currentTab === "graph" ? "bg-accent" : "hover:bg-muted"
-                    }`}
+            <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCurrentTab("search")}
+                className={cn(base, currentTab === "search" ? active : inactive)}
             >
-                <GitGraph className="w-6 h-6" />
-            </button>
+                <Search className="h-6 w-6" />
+            </Button>
+
+            <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCurrentTab("graph")}
+                className={cn(base, currentTab === "graph" ? active : inactive)}
+            >
+                <GitGraph className="h-6 w-6" />
+            </Button>
+            <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setCurrentTab("chat")}
+                className={cn(base, currentTab === "chat" ? active : inactive)}
+            >
+                <MessageCircleQuestionMark className="h-6 w-6" />
+            </Button>
         </div>
     )
 }

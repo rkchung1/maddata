@@ -20,7 +20,7 @@ export default function NoteEditor({ note, onSave }: NoteEditorProps) {
 
   if (!note)
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-400">
+      <div className="flex-1 flex items-center justify-center text-muted-foreground">
         Select a note
       </div>
     )
@@ -30,10 +30,10 @@ export default function NoteEditor({ note, onSave }: NoteEditorProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full p-4 font-sans bg-background">
+    <div className="flex-1 flex flex-col min-h-0 p-4 font-sans bg-background">
       {/* Save button */}
-      <div className="flex justify-end mb-2">
-        <Button onClick={handleSave} variant="default" size="sm">
+      <div className="flex justify-end mb-2 shrink-0">
+        <Button onClick={handleSave} size="sm">
           Save
         </Button>
       </div>
@@ -45,37 +45,40 @@ export default function NoteEditor({ note, onSave }: NoteEditorProps) {
         placeholder="Note Title"
         rows={1}
         className="
+          shrink-0
           text-4xl font-bold
           bg-background
-          text-black dark:text-white
+          text-foreground
           border-none
           outline-none
           resize-none
           p-0
           mb-4
           w-full
-          font-sans
+          leading-tight
         "
       />
 
-      {/* Content */}
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Start writing your note..."
-        className="
-          flex-1
-          w-full
-          bg-background
-          text-black dark:text-white
-          border-none
-          outline-none
-          resize-none
-          p-0
-          font-sans
-          text-lg
-        "
-      />
+      {/* Content wrapper MUST be min-h-0 for textarea scrolling to work */}
+      <div className="flex-1 min-h-0">
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Start writing your note..."
+          className="
+            h-full w-full
+            bg-background
+            text-foreground
+            border-none
+            outline-none
+            resize-none
+            p-0
+            text-lg
+            leading-relaxed
+            overflow-auto
+          "
+        />
+      </div>
     </div>
   )
 }
