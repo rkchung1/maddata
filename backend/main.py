@@ -68,6 +68,7 @@ def _row_to_note_response(row: sqlite3.Row) -> NoteResponse:
         title=row["title"],
         content=row["content"],
         tags=_parse_json_array(row["tags"]),
+        embedding=_parse_json_array(row["embedding"]),
     )
 
 
@@ -96,7 +97,7 @@ def _load_all_note_records() -> list[dict]:
 def list_notes() -> list[NoteResponse]:
     with _get_conn() as conn:
         rows = conn.execute(
-            "SELECT id, title, content, tags FROM notes ORDER BY rowid DESC"
+            "SELECT id, title, content, tags, embedding FROM notes ORDER BY rowid DESC"
         ).fetchall()
     return [_row_to_note_response(row) for row in rows]
 
@@ -163,6 +164,7 @@ def create_note(payload: NoteCreate) -> NoteResponse:
         title=payload.title,
         content=payload.content,
         tags=tags,
+        embedding=embedding,
     )
 
 @app.put("/api/notes/{note_id}", response_model=NoteResponse)
@@ -192,6 +194,7 @@ def update_note(note_id: str, payload: NoteUpdate) -> NoteResponse:
         title=payload.title,
         content=payload.content,
         tags=note_record["tags"],
+        embedding=note_record["embedding"],
     )
 
 

@@ -26,6 +26,7 @@ class NoteResponse(BaseModel):
     title: str
     content: str
     tags: List[str]
+    embedding: List[float] = Field(default_factory=list)
 
 class AskRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
