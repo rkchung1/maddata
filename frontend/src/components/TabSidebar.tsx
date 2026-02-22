@@ -1,5 +1,5 @@
 // src/components/TabSidebar.tsx
-import { GitGraph, NotebookPen, Search, MessageCircleQuestionMark } from "lucide-react"
+import { GitGraph, NotebookPen, MessageCircleQuestionMark, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -12,7 +12,7 @@ interface TabSidebarProps {
 
 export default function TabSidebar({ currentTab, setCurrentTab }: TabSidebarProps) {
     const base =
-        "h-11 w-11 p-0 rounded-xl border transition-colors " +
+        "h-11 w-11 p-0 rounded-xl border transition-colors cursor-pointer " +
         "focus-visible:ring-0 focus-visible:ring-offset-0"
 
     const active = "border-primary bg-transparent"
@@ -21,7 +21,7 @@ export default function TabSidebar({ currentTab, setCurrentTab }: TabSidebarProp
     return (
         <div className="w-16 bg-secondary flex flex-col justify-center items-center py-4 gap-4">
             <Button
-                type="button"
+                title="Notes"
                 variant="ghost"
                 onClick={() => setCurrentTab("notes")}
                 className={cn(base, currentTab === "notes" ? active : inactive)}
@@ -30,24 +30,25 @@ export default function TabSidebar({ currentTab, setCurrentTab }: TabSidebarProp
             </Button>
 
             <Button
-                type="button"
+                title="Smart Search"
                 variant="ghost"
                 onClick={() => setCurrentTab("search")}
                 className={cn(base, currentTab === "search" ? active : inactive)}
             >
-                <Search className="h-6 w-6" />
+                <Sparkles className="h-6 w-6" />
             </Button>
 
             <Button
-                type="button"
+                title="Graph View"
                 variant="ghost"
                 onClick={() => setCurrentTab("graph")}
                 className={cn(base, currentTab === "graph" ? active : inactive)}
             >
                 <GitGraph className="h-6 w-6" />
             </Button>
+
             <Button
-                type="button"
+                title="Ask the Librarian!"
                 variant="ghost"
                 onClick={() => setCurrentTab("chat")}
                 className={cn(base, currentTab === "chat" ? active : inactive)}
