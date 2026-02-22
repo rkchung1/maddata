@@ -64,24 +64,19 @@ export function useAsk(opts?: { mock?: boolean }) {
       let res: AskResponse
 
       if (mock) {
-        // TODO: replace with real API call
-        res = {
-          answer:
-            "Based on your notes, you’re aiming for a calmer workflow by reducing friction and keeping interfaces minimal. A good next step is to keep capture fast and defer organization, then use search/graph features to resurface patterns.",
-          citations: [
-            {
-              note_id: "mock-note-ui",
-              note_title: "UI inspiration",
-              quote: "Minimal interfaces feel calmer and help focus.",
-            },
-            {
-              note_id: "mock-note-philosophy",
-              note_title: "Note-taking philosophy",
-              quote: "Capture ideas fast, organize later.",
-            },
-          ],
+        const r = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: trimmed,
+          }),
+        })
+
+        if (!r.ok) {
+          throw new Error(`Request failed (${r.status})`)
         }
-        await new Promise((r) => setTimeout(r, 350))
+
+        res = (await r.json()) as AskResponse
       } else {
         const r = await fetch("/api/ask/", {
           method: "POST", // (your contract says GET, but JSON body -> POST is the sane choice)
