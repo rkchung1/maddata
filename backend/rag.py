@@ -73,7 +73,7 @@ def answer_question(question: str, chunks: List[Dict[str, Any]]) -> AskResponse:
 
     prompt = f"""
 Answer the question using only the provided note chunks.
-If the answer is not in the chunks, say: "Answer could not be found."
+If the answer is not in the chunks, say: "Answer could not be found in notes."
 Return JSON with an answer and citations pointing to the chunks used.
 
 Question:
