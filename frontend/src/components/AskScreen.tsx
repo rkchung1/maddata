@@ -59,9 +59,8 @@ export default function ChatRagScreen(props: {
                 className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 <Card
-                  className={`max-w-[820px] w-full p-3 ${
-                    isUser ? "bg-secondary/60" : ""
-                  }`}
+                  className={`max-w-[820px] w-full p-3 ${isUser ? "bg-secondary/60" : ""
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
@@ -136,15 +135,27 @@ export default function ChatRagScreen(props: {
         ) : null}
 
         <div className="flex gap-2 items-end">
-          <Textarea
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask something… (e.g., what themes keep recurring?)"
-            className="min-h-[44px] max-h-[160px] resize-none"
+            disabled={isLoading}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onSend()
             }}
-            disabled={isLoading}
+            className="
+                        w-full
+                        bg-background
+                        text-foreground
+                        border-none
+                        outline-none
+                        resize-none
+                        p-0
+                        min-h-[44px]
+                        max-h-[160px]
+                        leading-relaxed
+                        placeholder:text-muted-foreground
+                      "
           />
           <Button onClick={onSend} disabled={isLoading || !input.trim()}>
             Send
