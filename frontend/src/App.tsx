@@ -79,7 +79,7 @@ export default function App() {
               isTaggingById={isTaggingById}
               onDeleteNote={deleteNoteWithCleanup}
             />
-            <NoteEditor note={activeNote} onSave={saveNoteWithTagging} />
+            <NoteEditor note={activeNote} onSave={saveNoteWithTagging} onNew={addNote}/>
           </>
         )}
 

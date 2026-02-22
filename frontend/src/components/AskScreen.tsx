@@ -33,7 +33,7 @@ export default function ChatRagScreen(props: {
       {/* Header */}
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="space-y-0.5">
-          <div className="text-sm font-medium">Chat (RAG)</div>
+          <div className="text-sm font-medium">Ask The Librarian!</div>
           <div className="text-xs text-muted-foreground">
             Answers are grounded in your notes with citations.
           </div>
@@ -64,7 +64,7 @@ export default function ChatRagScreen(props: {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-xs text-muted-foreground">
-                      {isUser ? "You" : "Assistant"}
+                      {isUser ? "You" : "The Librarian"}
                     </div>
                     {m.citations?.length ? (
                       <Badge variant="secondary" className="text-xs">

@@ -167,7 +167,7 @@ type GraphView3DProps = {
 export default function GraphView3D({ notes, onNodeClick }: GraphView3DProps) {
   const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | null>(null)
   const [showLabels, setShowLabels] = useState(true)
-  const [minMmr, setMinMmr] = useState(0.33)
+  const [minMmr, setMinMmr] = useState(0.2)
   const [maxLinksPerNode, setMaxLinksPerNode] = useState(4)
 
   const data = useMemo(
@@ -199,8 +199,8 @@ export default function GraphView3D({ notes, onNodeClick }: GraphView3DProps) {
             className="w-28"
             type="range"
             min={0}
-            max={1}
-            step={0.01}
+            max={0.5}
+            step={0.10}
             value={minMmr}
             onChange={(e) => setMinMmr(Number(e.target.value))}
           />

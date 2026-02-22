@@ -54,6 +54,23 @@ export default function NoteSidebar({
         [notes]
     )
 
+    const sortedTags = useMemo(() => {
+        if (allTags.length === 0) return []
+
+        const selectedSet = new Set(activeTags)
+
+        // 1) selected first (preserve selection order)
+        const selected = activeTags.filter((t) => allTags.includes(t))
+
+        // 2) unselected next (alphabetical for stability)
+        const unselected = allTags
+            .filter((t) => !selectedSet.has(t))
+            .slice()
+            .sort((a, b) => a.localeCompare(b))
+
+        return [...selected, ...unselected]
+    }, [allTags, activeTags])
+
     const toggleTag = (tag: string) => {
         if (activeTags.includes(tag)) setActiveTags(activeTags.filter((t) => t !== tag))
         else setActiveTags([...activeTags, tag])
@@ -134,7 +151,7 @@ export default function NoteSidebar({
                                     {allTags.length === 0 ? (
                                         <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
                                     ) : (
-                                        allTags.map((tag) => {
+                                        sortedTags.map((tag) => {
                                             const selected = activeTags.includes(tag)
                                             return (
                                                 <DropdownMenuItem
@@ -210,6 +227,12 @@ export default function NoteSidebar({
                                     query={searchOpen ? query : ""}
                                     isTagging={isTaggingById?.(note.id) ?? false}
                                     onDelete={onDeleteNote ? () => onDeleteNote(note.id) : undefined}
+                                    onTagClick={(tag) => {
+                                        setActiveTags((prev) =>
+                                            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                                        )
+                                    }}
+                                    activeTags={activeTags}
                                 />
                                 {idx !== filteredNotes.length - 1 && <Separator className="my-1" />}
                             </div>

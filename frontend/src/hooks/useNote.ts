@@ -96,6 +96,12 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
     fetchNotes()
   }, [mock])
 
+  function bumpToFront<T extends { id: string }>(arr: T[], updated: T) {
+    const without = arr.filter((x) => x.id !== updated.id)
+    return [updated, ...without]
+  }
+
+  
   // Save / Update Note
   // Performs optimistic local update first, then merges backend result
   const saveNote = async ({
@@ -107,22 +113,24 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
     title: string
     content: string
   }) => {
-    // Immediate local update so UI reflects changes instantly
-    setNotes((prev) =>
-      prev.map((n) =>
+  
+    // 1) Optimistic update + bump to top
+    setNotes((prev) => {
+      const next = prev.map((n) =>
         n.id === id
           ? {
-            ...n,
-            title,
-            content,
-            updatedAt: new Date().toISOString(),
-          }
+              ...n,
+              title,
+              content,
+            }
           : n
       )
-    )
-
+      const updated = next.find((n) => n.id === id)
+      return updated ? bumpToFront(next, updated) : next
+    })
+  
     try {
-      // Backend save and enrichment (tags, embeddings, etc.)
+      // 2) Backend save and enrichment (tags, embeddings, etc.)
       let updatedNote: Note
       if (mock) {
         updatedNote = await mockSaveNote({ id, title, content })
@@ -132,29 +140,34 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, content }),
         })
-
+  
         if (!response.ok) {
           throw new Error(`PUT /api/notes/${id} failed with status ${response.status}`)
         }
-
+  
         updatedNote = (await response.json()) as Note
       }
-
-      // Merge backend result without undoing local edits
-      setNotes((prev) =>
-        prev.map((n) =>
+  
+      // 3) Merge backend result + keep title/content authoritative + bump to top again
+      setNotes((prev) => {
+        const merged = prev.map((n) =>
           n.id === id
             ? {
-              ...n,
-              ...updatedNote,
-              title,
-              content,
-            }
+                ...n,
+                ...updatedNote,
+                title,
+                content,
+              }
             : n
         )
-      )
+        const target = merged.find((n) => n.id === id)
+        return target ? bumpToFront(merged, target) : merged
+      })
+  
+      return updatedNote
     } catch (err) {
       console.error("Failed to save note:", err)
+      // Optional: set an error state or toast
     }
   }
 

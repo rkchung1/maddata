@@ -30,6 +30,8 @@ interface NoteRowButtonProps {
 
   // NEW: delete hook
   onDelete?: () => void | Promise<void>
+  onTagClick?: (tag: string) => void
+  activeTags?: string[]
 }
 
 function escapeRegExp(s: string) {
@@ -103,6 +105,8 @@ export default function NoteRowButton({
   query,
   isTagging = false,
   onDelete,
+  onTagClick,
+  activeTags
 }: NoteRowButtonProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -115,7 +119,7 @@ export default function NoteRowButton({
 
   const highlightQuery = (query ?? "").trim()
   const rawExcerpt = note.content?.trim() ? note.content.trim() : "No content"
-  const excerpt = makeExcerptAroundQuery(rawExcerpt, highlightQuery, 44)
+  const excerpt = makeExcerptAroundQuery(rawExcerpt, highlightQuery, 50)
 
   const canDelete = typeof onDelete === "function"
 
@@ -174,14 +178,39 @@ export default function NoteRowButton({
               </>
             ) : tags.length > 0 ? (
               <>
-                {tags.slice(0, 3).map((tag) => (
-                  <span
-                    key={tag}
-                    className="max-w-[100%] min-w-0 truncate text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground"
-                  >
-                    #{tag}
-                  </span>
-                ))}
+                {tags.slice(0, 3).map((tag) => {
+                  const isActiveTag = (activeTags ?? []).includes(tag)
+                  const clickable = typeof onTagClick === "function"
+
+                  return clickable ? (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onTagClick(tag)
+                      }}
+                      className={cn(
+                        "max-w-[100%] min-w-0 truncate text-xs px-2 py-0.5 rounded-md border transition-colors",
+                        isActiveTag
+                          ? "bg-primary text-primary-foreground border-primary shadow-inner"
+                          : "bg-muted text-muted-foreground border-transparent hover:bg-muted/70 hover:border-muted-foreground/20"
+                      )}
+                      aria-pressed={isActiveTag}
+                      title={isActiveTag ? "Remove tag filter" : "Filter by tag"}
+                    >
+                      #{tag}
+                    </button>
+                  ) : (
+                    <span
+                      key={tag}
+                      className="max-w-[100%] min-w-0 truncate text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground"
+                    >
+                      #{tag}
+                    </span>
+                  )
+                })}
                 {tags.length > 3 && (
                   <span className="text-xs text-muted-foreground">+{tags.length - 3}</span>
                 )}
