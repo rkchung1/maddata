@@ -50,7 +50,7 @@ def retrieve_top_chunks(question: str, notes: List[Dict[str, Any]], top_k: int =
             scored.append(
                 {
                     "note_id": note["id"],
-                    "chunk_index": chunk["index"],
+                    "note_title": note.get("title", ""),
                     "text": chunk["text"],
                     "score": score,
                 }
@@ -62,7 +62,7 @@ def retrieve_top_chunks(question: str, notes: List[Dict[str, Any]], top_k: int =
 def _build_context(chunks: List[Dict[str, Any]]) -> str:
     parts = []
     for c in chunks:
-        header = f"[note_id={c['note_id']} chunk={c['chunk_index']}]"
+        header = f"[note_id={c['note_id']} note_title={c.get('note_title', '')}]"
         parts.append(f"{header}\n{c['text']}")
     return "\n\n".join(parts)
 
@@ -102,7 +102,7 @@ Chunks:
         cleaned_citations.append(
             Citation(
                 note_id=c.note_id,
-                chunk_index=int(c.chunk_index),
+                note_title=c.note_title.strip(),
                 quote=c.quote[:160],
             )
         )
