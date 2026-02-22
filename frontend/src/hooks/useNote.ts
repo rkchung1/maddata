@@ -52,9 +52,11 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
         if (mock) {
           data = await mockFetchNotes()
         } else {
-          // TODO: replace with real GET /api/notes
-          const response = await fetch("/api/notes")
-          data = await response.json()
+          const response = await fetch("/api/notes", { method: "GET" })
+          if (!response.ok) {
+            throw new Error(`GET /api/notes failed with status ${response.status}`)
+          }
+          data = (await response.json()) as Note[]
         }
         setNotes(data)
         if (data.length > 0) setActiveNoteId(data[0].id)
@@ -74,13 +76,15 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
       if (mock) {
         updatedNote = await mockSaveNote({ id, title, content })
       } else {
-        // TODO: replace with real PUT /api/notes/{id}
         const response = await fetch(`/api/notes/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, content }),
         })
-        updatedNote = await response.json()
+        if (!response.ok) {
+          throw new Error(`PUT /api/notes/${id} failed with status ${response.status}`)
+        }
+        updatedNote = (await response.json()) as Note
       }
       setNotes((prev) => prev.map((n) => (n.id === id ? updatedNote : n)))
     } catch (err) {
@@ -97,13 +101,15 @@ export const useNotes = ({ mock = false }: UseNotesOptions = {}) => {
       if (mock) {
         newNote = await mockAddNote()
       } else {
-        // TODO: replace with real POST /api/notes
         const response = await fetch("/api/notes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "New Note", content: "", tags: [] }),
+          body: JSON.stringify({ title: "New Note", content: "" }),
         })
-        newNote = await response.json()
+        if (!response.ok) {
+          throw new Error(`POST /api/notes failed with status ${response.status}`)
+        }
+        newNote = (await response.json()) as Note
       }
       setNotes((prev) => [newNote, ...prev])
       setActiveNoteId(newNote.id)

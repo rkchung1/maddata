@@ -13,12 +13,12 @@ class TaggingResult(BaseModel):
 class NoteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(..., min_length=1)
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=0)
 
 class NoteUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(..., min_length=1)
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=0)
 
 class NoteResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

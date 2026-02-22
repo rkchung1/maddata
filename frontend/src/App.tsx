@@ -7,7 +7,7 @@ import { useNotes } from "./hooks/useNote"
 export default function App() {
   const [currentTab, setCurrentTab] = useState<"notes" | "graph" | "search">("notes")
 
-  const { notes, activeNote, activeNoteId, setActiveNoteId, saveNote, addNote } = useNotes({ mock: true })
+  const { notes, activeNote, activeNoteId, setActiveNoteId, saveNote, addNote } = useNotes({ mock: false })
 
   return (
     <div className="dark min-h-screen bg-background text-foreground flex">

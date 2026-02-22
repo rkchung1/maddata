@@ -30,8 +30,8 @@ def tag_note_with_llm(title: str, body: str) -> TaggingResult:
 Generate useful semantic tags for this note.
 
 Rules:
-- 1 to 5 tags
-- specific and meaningful
+- 1 to 3 tags
+- 1 broad tag that's more of a general category, the others should be specific and meaningful
 - avoid generic tags like note, thoughts, reminder, text
 - lowercase snake_case only
 - 1 word per tag
