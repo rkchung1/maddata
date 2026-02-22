@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, X } from "lucide-react"
+import { Search, Sparkles, X } from "lucide-react"
 import NoteRowButton from "@/components/NoteRowButton"
 
 interface SearchSidebarProps {
@@ -73,8 +73,10 @@ export default function SearchSidebar({ notes, activeNoteId, setActiveNoteId }: 
         {/* Header */}
         <div className="p-2">
           <div className="flex items-center gap-2 mb-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <div className="text-lg font-semibold">Search</div>
+            <Sparkles className="h-4 w-4 text-primary" />
+            <div className="text-lg font-semibold tracking-tight">
+              Smart Search
+            </div>
           </div>
 
           <div className="relative">

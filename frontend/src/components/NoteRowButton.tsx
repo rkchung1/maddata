@@ -18,7 +18,6 @@ export default function NoteRowButton({
   onSelect,
   showTags = true,
   tagsOverride,
-  excerptLines = 1,
   className,
 }: NoteRowButtonProps) {
   // TODO: Replace hardcoded tagsOverride usage with note.tags everywhere once stable
