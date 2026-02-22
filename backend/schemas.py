@@ -36,7 +36,7 @@ class AskRequest(BaseModel):
 class Citation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     note_id: str
-    chunk_index: int
+    note_title: str
     quote: str
 
 class AskResponse(BaseModel):

@@ -14,6 +14,7 @@ type GraphLink = {
   source: string
   target: string
   weight?: number
+  mmrScore?: number
 }
 
 function hashToGroup(s: string) {
@@ -38,6 +39,11 @@ function cosineSimilarity(a: number[] | undefined, b: number[] | undefined) {
   return dot / Math.sqrt(normA * normB)
 }
 
+function normalizeCosine(sim: number) {
+  // Maps cosine range [-1, 1] to [0, 1] for stable MMR scoring.
+  return (sim + 1) / 2
+}
+
 function buildGraphFromNotes(notes: Note[], threshold = 0.5, maxLinksPerNode = 4) {
   const nodes: GraphNode[] = notes.map((n, idx) => ({
     id: n.id ?? `note-${idx}`,
@@ -45,58 +51,123 @@ function buildGraphFromNotes(notes: Note[], threshold = 0.5, maxLinksPerNode = 4
     group: hashToGroup((n.title ?? "") + "|" + (n.content ?? "")),
   }))
 
+  const n = notes.length
+  const simMatrix: number[][] = Array.from({ length: n }, () =>
+    Array.from({ length: n }, () => Number.NaN)
+  )
+  for (let i = 0; i < n; i++) {
+    simMatrix[i][i] = 1
+  }
+
   const allPairs: Array<{ i: number; j: number; sim: number }> = []
   for (let i = 0; i < notes.length; i++) {
     for (let j = i + 1; j < notes.length; j++) {
       const sim = cosineSimilarity(notes[i].embedding, notes[j].embedding)
-      if (Number.isFinite(sim)) allPairs.push({ i, j, sim })
+      if (!Number.isFinite(sim)) continue
+      simMatrix[i][j] = sim
+      simMatrix[j][i] = sim
+      allPairs.push({ i, j, sim })
     }
   }
-  allPairs.sort((a, b) => b.sim - a.sim)
-  const candidates = allPairs.filter((p) => p.sim >= threshold)
 
+  const mmrLambda = 0.7
+  const selectedEdgeByKey = new Map<string, { i: number; j: number; sim: number; mmrScore: number }>()
+
+  for (let i = 0; i < n; i++) {
+    const candidates = Array.from({ length: n }, (_, j) => j).filter((j) => {
+      if (i === j) return false
+      const sim = simMatrix[i][j]
+      return Number.isFinite(sim)
+    })
+
+    const chosen: number[] = []
+    while (chosen.length < maxLinksPerNode && chosen.length < candidates.length) {
+      let bestJ = -1
+      let bestScore = Number.NEGATIVE_INFINITY
+      let bestRel = Number.NEGATIVE_INFINITY
+
+      for (const j of candidates) {
+        if (chosen.includes(j)) continue
+        const rel = normalizeCosine(simMatrix[i][j])
+        let redundancy = 0
+        for (const k of chosen) {
+          const simJK = simMatrix[j][k]
+          if (!Number.isFinite(simJK)) continue
+          redundancy = Math.max(redundancy, normalizeCosine(simJK))
+        }
+        const mmrScore = mmrLambda * rel - (1 - mmrLambda) * redundancy
+
+        if (mmrScore > bestScore || (mmrScore === bestScore && rel > bestRel)) {
+          bestScore = mmrScore
+          bestRel = rel
+          bestJ = j
+        }
+      }
+
+      if (bestJ === -1) break
+      chosen.push(bestJ)
+
+      const a = Math.min(i, bestJ)
+      const b = Math.max(i, bestJ)
+      const key = `${a}|${b}`
+      const sim = simMatrix[a][b]
+      const prev = selectedEdgeByKey.get(key)
+      if (!prev) {
+        selectedEdgeByKey.set(key, { i: a, j: b, sim, mmrScore: bestScore })
+      } else {
+        selectedEdgeByKey.set(key, {
+          i: a,
+          j: b,
+          sim: Math.max(prev.sim, sim),
+          mmrScore: Math.max(prev.mmrScore, bestScore),
+        })
+      }
+    }
+  }
+
+  const mmrEdges = Array.from(selectedEdgeByKey.values()).sort((a, b) => b.sim - a.sim)
   const degreeCount = new Map<string, number>()
   const links: GraphLink[] = []
-  for (const c of candidates) {
-    const source = nodes[c.i].id
-    const target = nodes[c.j].id
+  for (const edge of mmrEdges) {
+    if (edge.mmrScore < threshold) continue
+    const source = nodes[edge.i].id
+    const target = nodes[edge.j].id
     const sourceDegree = degreeCount.get(source) ?? 0
     const targetDegree = degreeCount.get(target) ?? 0
     if (sourceDegree >= maxLinksPerNode || targetDegree >= maxLinksPerNode) continue
-    links.push({ source, target, weight: c.sim })
+    links.push({ source, target, weight: edge.sim, mmrScore: edge.mmrScore })
     degreeCount.set(source, sourceDegree + 1)
     degreeCount.set(target, targetDegree + 1)
-  }
-
-  // If threshold is too strict, still show strongest semantic links.
-  if (links.length === 0 && allPairs.length > 0) {
-    for (const c of allPairs) {
-      const source = nodes[c.i].id
-      const target = nodes[c.j].id
-      const sourceDegree = degreeCount.get(source) ?? 0
-      const targetDegree = degreeCount.get(target) ?? 0
-      if (sourceDegree >= maxLinksPerNode || targetDegree >= maxLinksPerNode) continue
-      links.push({ source, target, weight: c.sim })
-      degreeCount.set(source, sourceDegree + 1)
-      degreeCount.set(target, targetDegree + 1)
-      if (links.length >= Math.min(nodes.length, maxLinksPerNode)) break
+    if (links.length >= n * maxLinksPerNode) {
+      break
     }
   }
 
   const withEmbedding = notes.filter((n) => Array.isArray(n.embedding) && n.embedding.length > 0).length
   const maxSimilarity = allPairs.length > 0 ? allPairs[0].sim : 0
-  return { nodes, links, maxSimilarity, withEmbedding, pairCount: allPairs.length }
+  const maxMmrScore = mmrEdges.reduce(
+    (acc, edge) => Math.max(acc, edge.mmrScore),
+    Number.NEGATIVE_INFINITY
+  )
+  return {
+    nodes,
+    links,
+    maxSimilarity,
+    maxMmrScore: Number.isFinite(maxMmrScore) ? maxMmrScore : 0,
+    withEmbedding,
+    pairCount: allPairs.length,
+  }
 }
 
 export default function GraphView3D({ notes }: { notes: Note[] }) {
   const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | null>(null)
   const [showLabels, setShowLabels] = useState(true)
-  const [minSimilarity, setMinSimilarity] = useState(0.5)
+  const [minMmr, setMinMmr] = useState(0.33)
   const [maxLinksPerNode, setMaxLinksPerNode] = useState(4)
 
   const data = useMemo(
-    () => buildGraphFromNotes(notes ?? [], minSimilarity, maxLinksPerNode),
-    [notes, minSimilarity, maxLinksPerNode]
+    () => buildGraphFromNotes(notes ?? [], minMmr, maxLinksPerNode),
+    [notes, minMmr, maxLinksPerNode]
   )
 
   return (
@@ -118,17 +189,17 @@ export default function GraphView3D({ notes }: { notes: Note[] }) {
         </button>
 
         <label className="text-sm flex items-center gap-2">
-          Min sim
+          Min score
           <input
             className="w-28"
             type="range"
             min={0}
-            max={2}
+            max={1}
             step={0.01}
-            value={minSimilarity}
-            onChange={(e) => setMinSimilarity(Number(e.target.value))}
+            value={minMmr}
+            onChange={(e) => setMinMmr(Number(e.target.value))}
           />
-          <span className="tabular-nums w-10 text-right">{minSimilarity.toFixed(2)}</span>
+          <span className="tabular-nums w-10 text-right">{minMmr.toFixed(2)}</span>
         </label>
 
         <label className="text-sm flex items-center gap-2">
@@ -149,12 +220,8 @@ export default function GraphView3D({ notes }: { notes: Note[] }) {
           <span className="tabular-nums">{data.nodes.length}</span>
           <span>edges:</span>
           <span className="tabular-nums">{data.links.length}</span>
-          <span>vec notes:</span>
-          <span className="tabular-nums">{data.withEmbedding}</span>
-          <span>pairs:</span>
-          <span className="tabular-nums">{data.pairCount}</span>
-          <span>max sim:</span>
-          <span className="tabular-nums">{data.maxSimilarity.toFixed(2)}</span>
+          <span>max mmr:</span>
+          <span className="tabular-nums">{data.maxMmrScore.toFixed(2)}</span>
         </div>
       </div>
 
@@ -167,6 +234,7 @@ export default function GraphView3D({ notes }: { notes: Note[] }) {
         nodeRelSize={5}
         nodeVal={() => 1.2}
         linkOpacity={0.35}
+        linkLabel={(l) => `Score: ${(l.mmrScore ?? 0).toFixed(3)}`}
         linkWidth={(l) => 0.6 + (l.weight ?? 0.3) * 1.2}
         linkDirectionalParticles={(l) => ((l.weight ?? 0) > 0.8 ? 2 : 0)}
         linkDirectionalParticleWidth={1.5}
@@ -174,7 +242,7 @@ export default function GraphView3D({ notes }: { notes: Note[] }) {
         nodeThreeObject={(node: GraphNode) => {
           if (!showLabels) return undefined
           const sprite = new SpriteText(node.name)
-          sprite.textHeight = 6
+          sprite.textHeight = 4
           sprite.color = "rgba(255,255,255,0.9)"
           sprite.backgroundColor = "rgba(0,0,0,0.35)"
           sprite.padding = 2
